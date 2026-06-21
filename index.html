@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Addiator Duplex – Simulator</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-mode="add">
+  <header class="topbar">
+    <h1>Addiator&nbsp;Duplex</h1>
+    <div class="mode-badge" id="modeBadge">Addition</div>
+  </header>
+
+  <main>
+    <section class="readout">
+      <span class="readout-label">Wert</span>
+      <span class="readout-value" id="readout">0</span>
+    </section>
+
+    <div class="stage">
+      <div class="device" id="device">
+        <!-- SVG wird per JS erzeugt -->
+      </div>
+    </div>
+
+    <section class="controls">
+      <button id="flipBtn" class="btn btn-flip" type="button">
+        <span class="btn-icon">⟲</span>
+        <span class="btn-text">Umdrehen<br /><small>Add ⇄ Sub</small></span>
+      </button>
+      <button id="clearBtn" class="btn" type="button">
+        <span class="btn-icon">⊘</span>
+        <span class="btn-text">Löschen</span>
+      </button>
+      <label class="btn btn-toggle">
+        <input type="checkbox" id="transparentToggle" />
+        <span class="btn-icon">◍</span>
+        <span class="btn-text">Transparent<br /><small>Mechanik zeigen</small></span>
+      </label>
+      <button id="helpBtn" class="btn" type="button">
+        <span class="btn-icon">?</span>
+        <span class="btn-text">Anleitung</span>
+      </button>
+    </section>
+  </main>
+
+  <dialog id="helpDialog" class="help">
+    <h2>So funktioniert der Addiator</h2>
+    <ul>
+      <li><strong>Addieren:</strong> Ziehe einen Schieber nach <em>unten</em>. Pro Raste +1.</li>
+      <li><strong>Subtrahieren:</strong> Drehe das Gerät um (<em>Umdrehen</em>) und ziehe nach <em>oben</em>.</li>
+      <li><strong>Übertrag:</strong> Läuft eine Stelle über die <span class="red">9</span> hinaus (bzw. unter die 0), wird der Schieber über den Bogen am Rand geführt – der Übertrag wandert wie beim echten Gerät zur nächsten Stelle weiter.</li>
+      <li><strong>Transparent-Modus:</strong> Zeigt die Zahnstangen und die Übertrag-Hebel im Inneren.</li>
+      <li><strong>Tastatur:</strong> Eine Stelle anklicken (fokussieren), dann Ziffer 0–9 drücken, um diesen Betrag zu addieren bzw. zu subtrahieren.</li>
+    </ul>
+    <form method="dialog"><button class="btn">Verstanden</button></form>
+  </dialog>
+
+  <script src="model.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
