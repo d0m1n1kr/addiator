@@ -120,9 +120,18 @@ main {
 }
 
 .tick { stroke: var(--muted); stroke-width: 1.5; }
-.scale-num { fill: var(--muted); font-size: 13px; text-anchor: middle; font-variant-numeric: tabular-nums; }
+.scale-num { fill: var(--muted); font-size: 13px; text-anchor: middle; font-variant-numeric: tabular-nums; transition: fill .15s; }
+.scale-num.red { fill: var(--accent-sub); font-weight: 700; }
 
-/* Schieber-Griff */
+/* Rote Übertrag-Zone der Skala */
+.redzone {
+  fill: var(--accent-sub);
+  opacity: .22;
+  transition: y .15s, height .15s;
+  pointer-events: none;
+}
+
+/* Stift-Griff (ruht oben bei 0) */
 .handle { transition: transform .28s cubic-bezier(.2,.8,.25,1); cursor: grab; }
 .handle.no-anim { transition: none; }
 .handle-body {
@@ -130,25 +139,27 @@ main {
   stroke: var(--metal-3);
   stroke-width: 1.5;
 }
-.handle-hole { fill: #2a2e38; stroke: var(--metal-3); stroke-width: 1; }
+.handle-arrow { fill: var(--metal-3); }
 .col.grabbing .handle { cursor: grabbing; }
 .col.grabbing .handle-body { fill: #fff; }
 
 /* Greiffläche */
 .grab { fill: transparent; cursor: grab; outline: none; }
-.grab:focus-visible + .handle .handle-body,
 .col:focus-within .handle-body { stroke: var(--accent-add); stroke-width: 2.5; }
+body[data-mode="sub"] .col:focus-within .handle-body { stroke: var(--accent-sub); }
 
-/* Bögen für Übertrag / Entlehnung */
-.hook { fill: none; stroke-width: 2.5; stroke-linecap: round; opacity: .35; }
-.hook-carry { stroke: var(--accent-add); }
-.hook-borrow { stroke: var(--accent-sub); opacity: .12; }
-body[data-mode="sub"] .hook-carry { opacity: .12; }
-body[data-mode="sub"] .hook-borrow { opacity: .35; }
+/* Roter Übertrag-Indikator in der Ergebnisanzeige */
+.carry-ind { fill: var(--accent-sub); opacity: 0; transition: opacity .12s; }
+.carry-ind.show { opacity: 1; }
+.col.pulse .carry-ind { animation: indFlash .6s ease-out; }
+@keyframes indFlash {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
 
 /* Übertrag-Vorschau & Animation */
 .col.carry-pending .handle-body { fill: #ffcf4d; stroke: #b3860a; }
-.col.carry-pending .window { stroke: #ffcf4d; }
+.col.carry-pending .window { stroke: var(--accent-sub); }
 .col.pulse .window { animation: winPulse .6s ease-out; }
 .col.pulse .window-num { animation: numPulse .6s ease-out; }
 @keyframes winPulse {
