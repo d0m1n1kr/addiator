@@ -33,6 +33,7 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html styles.css app.js model.js _site/
+          touch _site/.nojekyll
 
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
