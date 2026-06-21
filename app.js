@@ -8,10 +8,12 @@
  *  - Die rot unterlegte Zone der Skala zeigt, ab welcher Zahl ein Übertrag
  *    nötig wird.
  *
- * Transparent-Modus: zeigt die Zahnstangen (mit Zacken) und den Übertragshebel.
- * Jede Rechnung läuft dann als Schritt-für-Schritt-Simulation ab – die
- * Zahnstange scrollt um die gezählten Zacken, der Hebel kippt und rückt die
- * nächste Stelle eine Zacke weiter; Überträge kaskadieren sichtbar nach links.
+ * Transparent-Modus: zeigt die Zahnstange (mit Zacken) und den Übertragshebel.
+ *  - Die Zahnstange folgt der Eingabe (Position = aktuelle Ziffer).
+ *  - Läuft eine Stelle über die 9 (bzw. unter die 0), macht die Zahnstange den
+ *    Rückhub „über die Null". Dabei betätigt ihr hervorgehobener Übertragszahn
+ *    den Hebel zwischen den Stellen, der die Nachbarstelle eine Zacke
+ *    weiterrückt – Überträge kaskadieren so sichtbar nach links.
  */
 (function () {
   'use strict';
@@ -24,7 +26,7 @@
   const MARGIN = 22;
   const WINDOW_H = 56;
   const GAP = 14;
-  const TOP_HOOK = 34; // Bereich für den Übertragshebel über der Skala
+  const TOP_HOOK = 38; // Bereich für den Übertragshebel über der Skala
   const DETENT = 26; // Abstand zweier Rasten / Zacken
   const STEPS = 9; // 0..9
   const TRACK_H = STEPS * DETENT;
@@ -35,6 +37,7 @@
   const HEIGHT = TRACK_TOP + TRACK_H + BOT_HOOK + MARGIN;
 
   const yOf = (a) => TRACK_TOP + a * DETENT; // a = Position/Betrag 0..9
+  const LEVER_Y = TRACK_TOP - 2; // Höhe des Übertragshebels / Pin-Kontakt
 
   // ---- Hilfsfunktionen ---------------------------------------------------
   function el(tag, attrs, children) {
@@ -43,9 +46,8 @@
     if (children) children.forEach((c) => node.appendChild(c));
     return node;
   }
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  // Zahnrad-/Zahnstangen-Kontur mit Zacken auf beiden Seiten
+  // gezahnte Kontur (Zacken auf beiden Seiten)
   function teethPath(cx, yTop, yBot, pitch, halfW, toothD) {
     let d = `M ${cx + halfW} ${yTop}`;
     for (let y = yTop; y < yBot; y += pitch) {
@@ -58,9 +60,13 @@
     return d + ' Z';
   }
 
-  // einfache rAF-Tween-Funktion (Werte in SVG-Einheiten)
+  // rAF-Tween (Werte in SVG-Einheiten)
   function tween(duration, from, to, onUpdate) {
     return new Promise((resolve) => {
+      if (duration <= 0 || from === to) {
+        onUpdate(to);
+        return resolve();
+      }
       const start = performance.now();
       function frame(now) {
         const t = Math.min(1, (now - start) / duration);
@@ -86,11 +92,11 @@
   });
   deviceEl.appendChild(svg);
 
-  // Clip für die Zahnstange (lokale Koordinaten, in jeder Spalte wiederverwendet)
+  // Clip für die Zahnstange (lokale Koordinaten, je Spalte wiederverwendet)
   const cx0 = COL_W / 2;
   const defs = el('defs');
   const clip = el('clipPath', { id: 'trackClip', clipPathUnits: 'userSpaceOnUse' });
-  clip.appendChild(el('rect', { x: cx0 - 17, y: TRACK_TOP - 3, width: 34, height: TRACK_H + 6 }));
+  clip.appendChild(el('rect', { x: cx0 - 20, y: TRACK_TOP - DETENT, width: 40, height: TRACK_H + DETENT + 4 }));
   defs.appendChild(clip);
   svg.appendChild(defs);
 
@@ -109,19 +115,21 @@
       g.appendChild(el('line', { x1: 0, y1: MARGIN, x2: 0, y2: HEIGHT - MARGIN, class: 'col-sep' }));
     }
 
-    // --- Mechanik: Zahnstange mit Zacken (nur im Transparent-Modus sichtbar) ---
+    // --- Mechanik (nur im Transparent-Modus sichtbar) ---
     const mech = el('g', { class: 'mech' });
-    const rackTeeth = el('path', {
-      d: teethPath(cx, TRACK_TOP - 2 * DETENT, TRACK_TOP + TRACK_H + 2 * DETENT, DETENT, 6, 6),
-      class: 'rack-teeth',
-      'clip-path': 'url(#trackClip)',
-      transform: 'translate(0,0)',
-    });
-    mech.appendChild(rackTeeth);
-    // Ableselinie (zeigt, wie die Zacken vorbeilaufen)
-    mech.appendChild(
-      el('line', { x1: cx - 15, y1: TRACK_TOP + TRACK_H / 2, x2: cx + 15, y2: TRACK_TOP + TRACK_H / 2, class: 'read-line' })
+    // bewegliche Zahnstange (Position = Ziffer): teeth + Übertragszahn
+    const rack = el('g', { class: 'rack', 'clip-path': 'url(#trackClip)', transform: 'translate(0,0)' });
+    rack.appendChild(
+      el('path', {
+        d: teethPath(cx, TRACK_TOP - 10 * DETENT, TRACK_TOP + TRACK_H + DETENT, DETENT, 6, 6),
+        class: 'rack-teeth',
+      })
     );
+    // Übertragszahn: sitzt bei Ziffer 0 auf Höhe des Hebels und wandert mit
+    rack.appendChild(
+      el('path', { d: `M ${cx - 6} ${LEVER_Y - 7} L ${cx - 19} ${LEVER_Y} L ${cx - 6} ${LEVER_Y + 7} Z`, class: 'carry-tooth' })
+    );
+    mech.appendChild(rack);
     g.appendChild(mech);
 
     // --- Schiene ---
@@ -162,7 +170,7 @@
     g.appendChild(grab);
 
     svg.appendChild(g);
-    const col = { i, g, handle, winText, grab, rackTeeth, redZone, scaleLabels, carryInd, rackTy: 0 };
+    const col = { i, g, handle, winText, grab, rack, redZone, scaleLabels, carryInd, rackDigit: 0 };
     cols.push(col);
     bindColumn(col);
   }
@@ -171,16 +179,14 @@
   const pawlLayer = el('g', { class: 'pawl-layer' });
   svg.appendChild(pawlLayer);
   for (let i = 1; i < N; i++) {
-    const X = MARGIN + i * COL_W; // Grenze zwischen Stelle i und i-1
-    const pY = TRACK_TOP - 8;
-    // Hebel: Drehpunkt oben an der Grenze, Finger zeigt nach links-unten zur Nachbarstelle
-    const elx = el('path', {
-      d: `M ${X} ${pY} L ${X - 4} ${pY + 30} L ${X - 16} ${pY + 24} L ${X - 10} ${pY + 12} Z`,
-      class: 'cpawl',
-      transform: `rotate(0 ${X} ${pY})`,
-    });
-    pawlLayer.appendChild(elx);
-    cols[i].pawl = { el: elx, X, pY };
+    const X = MARGIN + i * COL_W; // Grenze zwischen Stelle i (rechts) und i-1 (links)
+    const lever = el('g', { class: 'cpawl', transform: `rotate(0 ${X} ${LEVER_Y})` });
+    lever.appendChild(el('line', { x1: X - 30, y1: LEVER_Y, x2: X + 20, y2: LEVER_Y, class: 'lever-rod' }));
+    lever.appendChild(el('circle', { cx: X + 18, cy: LEVER_Y, r: 3.2, class: 'lever-tip' })); // Antrieb (Stelle i)
+    lever.appendChild(el('circle', { cx: X - 28, cy: LEVER_Y, r: 3.2, class: 'lever-tip' })); // Abtrieb (Stelle i-1)
+    lever.appendChild(el('circle', { cx: X, cy: LEVER_Y, r: 2, class: 'lever-pivot' }));
+    pawlLayer.appendChild(lever);
+    cols[i].pawl = { el: lever, X, y: LEVER_Y };
   }
 
   // ---- Anzeige aktualisieren --------------------------------------------
@@ -190,9 +196,13 @@
   function isTransparent() {
     return bodyEl.classList.contains('transparent');
   }
-
   function carryThreshold(v) {
     return isAdd() ? 10 - v : v + 1; // Beträge >= threshold liegen in der roten Zone
+  }
+
+  function setRack(col, digit) {
+    col.rackDigit = digit;
+    col.rack.setAttribute('transform', `translate(0,${digit * DETENT})`);
   }
 
   function updateRedZone(col) {
@@ -219,6 +229,7 @@
       col.winText.textContent = String(model.digits[col.i]);
       col.carryInd.classList.remove('show');
       setHandle(col, 0, animate);
+      setRack(col, model.digits[col.i]);
       updateRedZone(col);
     }
     readoutEl.textContent = String(model.value);
@@ -232,7 +243,6 @@
     setTimeout(() => c.g.classList.remove('pulse'), 600);
   }
 
-  // schnelle Animation ohne Transparent-Modus
   function animateChain(events) {
     let delay = 0;
     events.forEach((e) => {
@@ -244,60 +254,85 @@
   // ---- Mechanik-Simulation (Transparent-Modus) --------------------------
   let animating = false;
 
-  // Zahnstange um `teeth` Zacken scrollen; dir +1 = addieren (Zacken nach oben)
-  function scrollRack(col, teeth, dir) {
-    const from = col.rackTy;
-    const to = from - dir * teeth * DETENT;
-    return tween(Math.max(260, teeth * 150), from, to, (v) => {
-      col.rackTeeth.setAttribute('transform', `translate(0,${v})`);
+  function scrollTo(col, toDigit) {
+    const from = cols[col].rackDigit * DETENT;
+    const to = toDigit * DETENT;
+    const teeth = Math.abs(toDigit - cols[col].rackDigit);
+    return tween(Math.max(0, teeth) * 120, from, to, (v) => {
+      cols[col].rack.setAttribute('transform', `translate(0,${v})`);
     }).then(() => {
-      let norm = to % DETENT; // periodisch normalisieren (Zacken wiederholen sich)
-      if (norm > 0) norm -= DETENT;
-      col.rackTy = norm;
-      col.rackTeeth.setAttribute('transform', `translate(0,${norm})`);
+      cols[col].rackDigit = toDigit;
+    });
+  }
+
+  // Rückhub „über die Null" (Übertrag) bzw. „unter die Neun" (Entlehnung)
+  function overTop(col, dir) {
+    const from = cols[col].rackDigit * DETENT;
+    const to = (dir > 0 ? 0 : 9) * DETENT;
+    return tween(420, from, to, (v) => {
+      cols[col].rack.setAttribute('transform', `translate(0,${v})`);
+    }).then(() => {
+      cols[col].rackDigit = dir > 0 ? 0 : 9;
     });
   }
 
   function rotatePawl(col, fromA, toA) {
-    const p = col.pawl;
-    return tween(160, fromA, toA, (a) => {
-      p.el.setAttribute('transform', `rotate(${a} ${p.X} ${p.pY})`);
+    const p = cols[col].pawl;
+    return tween(150, fromA, toA, (a) => {
+      p.el.setAttribute('transform', `rotate(${a} ${p.X} ${p.y})`);
     });
   }
 
-  // einen Schritt verbuchen: col um `inc` Zacken bewegen und Anzeige setzen
-  async function applyStep(disp, col, inc, dir) {
-    await scrollRack(cols[col], inc, dir);
-    const from = disp[col];
-    const sum = from + dir * inc;
-    const to = ((sum % 10) + 10) % 10;
-    disp[col] = to;
-    cols[col].winText.textContent = String(to);
-    pulse(col);
-    return dir > 0 ? sum > 9 : sum < 0; // Übertrag/Entlehnung nötig?
+  function setWin(col, d) {
+    cols[col].winText.textContent = String(d);
   }
 
-  async function runMechanism(i, amount, addOp, oldDigits) {
+  // einen Betrag k auf Stelle col verbuchen (dir +1 add / -1 sub), animiert
+  async function opChain(disp, col, k, dir) {
+    const d0 = disp[col];
+    const target = d0 + dir * k;
+    const wraps = dir > 0 ? target > 9 : target < 0;
+
+    if (!wraps) {
+      await scrollTo(col, target);
+      disp[col] = target;
+      setWin(col, target);
+      pulse(col);
+      return;
+    }
+
+    // bis zur Grenze (9 bzw. 0) fahren …
+    await scrollTo(col, dir > 0 ? 9 : 0);
+    // … dann der Übertrags-Rückhub: der Übertragszahn fährt zum Hebel
+    await overTop(col, dir);
+    disp[col] = dir > 0 ? 0 : 9;
+    setWin(col, disp[col]);
+
+    // Hebel betätigt die Nachbarstelle (eine Zacke), ggf. kaskadierend
+    if (col > 0) {
+      cols[col].pawl.el.classList.add('active');
+      await rotatePawl(col, 0, dir > 0 ? -16 : 16);
+      await opChain(disp, col - 1, 1, dir);
+      await rotatePawl(col, dir > 0 ? -16 : 16, 0);
+      cols[col].pawl.el.classList.remove('active');
+    }
+
+    // restlichen Betrag der eigenen Stelle nachführen
+    const remainder = target - dir * 10;
+    await scrollTo(col, remainder);
+    disp[col] = remainder;
+    setWin(col, remainder);
+    pulse(col);
+  }
+
+  async function runMechanism(i, amount, dir, oldDigits) {
     animating = true;
     bodyEl.classList.add('animating');
     const disp = [...oldDigits];
-    const dir = addOp ? 1 : -1;
-
-    let carry = await applyStep(disp, i, amount, dir);
-    let col = i;
-    while (carry && col > 0) {
-      cols[col].pawl.el.classList.add('active');
-      await rotatePawl(cols[col], 0, -24); // Hebel kippt zur Nachbarstelle
-      carry = await applyStep(disp, col - 1, 1, dir); // Nachbar rückt eine Zacke
-      await rotatePawl(cols[col], -24, 0);
-      cols[col].pawl.el.classList.remove('active');
-      col -= 1;
-      await sleep(120);
-    }
-
+    await opChain(disp, i, amount, dir);
     animating = false;
     bodyEl.classList.remove('animating');
-    refresh(false); // Endstand mit Modell abgleichen
+    refresh(false); // mit Modell-Endstand abgleichen
   }
 
   // ---- Drag-Logik (Stift von 0 nach unten ziehen) -----------------------
@@ -316,7 +351,11 @@
     function preview() {
       const v = model.digits[col.i];
       const carry = amount >= carryThreshold(v);
-      const shown = isAdd() ? (v + amount) % 10 : (v - amount + 10) % 10;
+      // Zahnstange folgt dem Stift bis zur Grenze (9 bzw. 0)
+      const clamped = isAdd() ? Math.min(v + amount, 9) : Math.max(v - amount, 0);
+      setRack(col, clamped);
+      // Fenster: im Transparent-Modus den Mechanik-Stand zeigen, sonst Ergebnis-Vorschau
+      const shown = isTransparent() ? clamped : isAdd() ? (v + amount) % 10 : (v - amount + 10) % 10;
       col.winText.textContent = String(shown);
       col.carryInd.classList.toggle('show', amount > 0 && carry);
       col.g.classList.toggle('carry-pending', amount > 0 && carry);
@@ -364,8 +403,9 @@
   }
 
   function commit(i, amount) {
-    if (!amount || animating) {
-      if (!amount) refresh(true);
+    if (animating) return;
+    if (!amount) {
+      refresh(true);
       return;
     }
     const old = [...model.digits];
@@ -374,9 +414,8 @@
     if ((isAdd() && res.overflow) || (!isAdd() && res.underflow)) flashError();
 
     if (isTransparent()) {
-      // Griff zurück auf 0, dann Mechanik Schritt für Schritt zeigen
-      cols[i].handle.setAttribute('transform', `translate(${COL_W / 2},${yOf(0)})`);
-      runMechanism(i, amount, isAdd(), old);
+      setHandle(cols[i], 0, false); // Griff zurück auf 0, Mechanik zeigt den Rest
+      runMechanism(i, amount, isAdd() ? 1 : -1, old);
     } else {
       refresh(true);
       if (chain.length) animateChain(chain);

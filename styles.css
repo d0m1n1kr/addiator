@@ -188,16 +188,20 @@ body[data-mode="sub"] .col:focus-within .handle-body { stroke: var(--accent-sub)
   stroke-width: 1.2;
   stroke-linejoin: round;
 }
-.read-line { stroke: rgba(255,255,255,.35); stroke-width: 1; stroke-dasharray: 2 3; }
-
-.pawl-layer { opacity: 0; transition: opacity .35s; pointer-events: none; }
-.cpawl {
-  fill: var(--metal-2);
-  stroke: rgba(140,190,255,.8);
+/* hervorgehobener Übertragszahn */
+.carry-tooth {
+  fill: var(--accent-sub);
+  stroke: #ffd9c2;
   stroke-width: 1;
-  transition: fill .15s;
 }
-.cpawl.active { fill: #ffcf4d; stroke: #ffcf4d; }
+
+/* Übertragshebel */
+.pawl-layer { opacity: 0; transition: opacity .35s; pointer-events: none; }
+.lever-rod { stroke: var(--metal-1); stroke-width: 3; stroke-linecap: round; }
+.lever-tip { fill: var(--metal-2); stroke: rgba(150,200,255,.8); stroke-width: 1; }
+.lever-pivot { fill: rgba(150,200,255,.9); }
+.cpawl.active .lever-rod { stroke: #ffcf4d; }
+.cpawl.active .lever-tip { fill: #ffcf4d; stroke: #ffcf4d; }
 
 body.transparent .mech,
 body.transparent .pawl-layer { opacity: 1; }
