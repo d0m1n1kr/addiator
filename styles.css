@@ -23,7 +23,16 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 
-body { display: flex; flex-direction: column; align-items: center; }
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Im Hilfe-Dialog soll Text wieder markierbar sein */
+dialog.help { user-select: text; -webkit-user-select: text; }
 
 .topbar {
   width: 100%;
