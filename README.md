@@ -17,8 +17,11 @@ werden unterstützt.
 - **Übertrag (manuell wie beim Original):** Läuft eine Stelle über die 9 bzw.
   unter die 0, wird der Schieber über den farbigen Bogen am Rand geführt. Der
   Übertrag wandert dann – auch kaskadierend – zur nächsthöheren Stelle.
-- **Transparent-Modus:** Blendet die Zahnstangen und die Übertrag-Hebel im
-  Inneren ein, um die Mechanik nachzuvollziehen.
+- **Transparent-Modus:** Blendet die Zahnstangen (mit Zacken) und den
+  Übertragshebel ein. Jede Rechnung läuft dann als Schritt-für-Schritt-
+  Simulation ab: die Zahnstange scrollt um die gezählten Zacken, der Hebel
+  kippt und rückt die nächste Stelle eine Zacke weiter – Überträge wandern
+  sichtbar (kaskadierend) nach links.
 - **Löschen:** Setzt das Register auf 0 zurück.
 - **Tastatur:** Eine Stelle anklicken (fokussieren) und Ziffer `0`–`9` drücken,
   um diesen Betrag zu addieren bzw. zu subtrahieren.
